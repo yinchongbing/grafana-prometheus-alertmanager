@@ -8,6 +8,7 @@
 - prometheus v2.21.0
 - prometheus github地址https://github.com/prometheus/prometheus
 - prometheus官方文档地址https://prometheus.io/docs/prometheus
+- kubernetes版本1.18.3
 
 ## 1.2镜像版本说明
 
