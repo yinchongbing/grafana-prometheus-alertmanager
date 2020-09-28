@@ -438,7 +438,7 @@ data:
     receivers:
     - name: 'default'
       email_configs:
-      - to: 'yinchongbingx@163.com'
+      - to: 'abc@163.com'
         send_resolved: true
 ---
 apiVersion: v1
