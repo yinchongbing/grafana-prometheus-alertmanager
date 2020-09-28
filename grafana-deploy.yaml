@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      task: monitoring
+      k8s-app: grafana
+  template:
+    metadata:
+      labels:
+        task: monitoring
+        k8s-app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: 10.110.63.25/rancher/grafana:7.2.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: GF_AUTH_BASIC_ENABLED
+              value: 'true'
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: 'true'
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: Admin
+            - name: GF_DASHBOARDS_JSON_ENABLED
+              value: 'true'
+            - name: GF_INSTALL_PLUGINS
+              value: grafana-kubernetes-app
+            - name: GF_SECURITY_ALLOW_EMBEDDING
+              value: 'true'
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  key: admin-username
+                  name: grafana
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: admin-password
+                  name: grafana
+          volumeMounts:
+          - mountPath: /var/lib/grafana
+            name: grafana-storage
+      initContainers:
+        - name: grafana-chown
+          command: ["chown", "-R", "472:472", "/var/lib/grafana"]
+          image: 10.110.63.25/rancher/busybox:latest
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: grafana-storage
+          persistentVolumeClaim:
+            claimName: grafana-storage
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-storage
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: cephfs
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana
+  namespace: monitoring
+data:
+  admin-password: YWRtaW4=
+  admin-username: YWRtaW4=
+type: Opaque
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitoring-grafana
+  namespace: monitoring
+  labels:
+    k8s-app: grafana
+    component: core
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/path: '/metrics'
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+  selector:
+    k8s-app: grafana
